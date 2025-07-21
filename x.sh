@@ -5,6 +5,7 @@ set -e
 # ==== CONFIG ====
 ROOT_PART="/dev/nvme0n1p2"
 EFI_PART="/dev/nvme0n1p1"
+DISK="/dev/nvme0n1"
 ROOT_SUBVOL="@"
 # =================
 
@@ -35,7 +36,10 @@ echo "[chroot] Installing grub and btrfs-progs..."
 pacman -S --noconfirm grub btrfs-progs
 
 echo "[chroot] Installing GRUB for UEFI..."
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+if ! grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB; then
+    echo "[chroot] grub-install failed to register boot entry. Trying efibootmgr manually..."
+    efibootmgr --create --disk /dev/nvme0n1 --part 1 --label "GRUB" --loader /EFI/GRUB/grubx64.efi || echo "[WARNING] efibootmgr failed. Make sure GRUB is registered in your UEFI settings."
+fi
 
 echo "[chroot] Configuring GRUB to boot silently..."
 cat > /etc/default/grub <<GRUBCFG
